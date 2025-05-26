@@ -1,0 +1,113 @@
+---
+title: "Building Scalable Microservices with Spring Boot and Kubernetes"
+excerpt: "A comprehensive guide to designing, deploying, and scaling microservices using Spring Boot and Kubernetes in enterprise environments."
+coverImage: "/images/companies/java.png"
+date: "2025-05-20"
+author: "Omendra Dwivedi"
+authorImage: "/images/mentor/user1.png"
+---
+
+# Building Scalable Microservices with Spring Boot and Kubernetes
+
+## Introduction
+
+In today's enterprise landscape, microservices architecture has become the go-to choice for building scalable and maintainable applications. This guide explores how to leverage Spring Boot and Kubernetes to create robust microservices.
+
+## Key Components
+
+### 1. Spring Boot Application Setup
+
+```java
+@SpringBootApplication
+@EnableDiscoveryClient
+public class OrderServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderServiceApplication.class, args);
+    }
+}
+```
+
+### 2. Service Discovery with Kubernetes
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: order-service:1.0
+        ports:
+        - containerPort: 8080
+```
+
+## Best Practices
+
+1. **Circuit Breaking**: Implement Resilience4j for fault tolerance
+2. **API Documentation**: Use SpringDoc OpenAPI for API documentation
+3. **Monitoring**: Set up Prometheus and Grafana for metrics
+4. **Logging**: Centralize logs with ELK stack
+
+## Implementation Guide
+
+### 1. Setting Up Circuit Breakers
+
+```java
+@CircuitBreaker(name = "orderService")
+@GetMapping("/orders/{id}")
+public Order getOrder(@PathVariable String id) {
+    return orderRepository.findById(id)
+        .orElseThrow(() -> new OrderNotFoundException(id));
+}
+```
+
+### 2. Implementing API Gateway
+
+```java
+@Configuration
+public class GatewayConfig {
+    @Bean
+    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
+        return builder.routes()
+            .route("order_service", r -> r
+                .path("/api/orders/**")
+                .uri("lb://order-service"))
+            .build();
+    }
+}
+```
+
+## Deployment Strategy
+
+1. **Rolling Updates**: Ensure zero-downtime deployments
+2. **Auto-scaling**: Configure HPA for dynamic scaling
+3. **Health Checks**: Implement readiness and liveness probes
+
+## Monitoring and Maintenance
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-service-monitor
+spec:
+  selector:
+    matchLabels:
+      app: order-service
+  endpoints:
+  - port: metrics
+```
+
+## Conclusion
+
+Building microservices with Spring Boot and Kubernetes provides a robust foundation for enterprise applications. Follow these patterns and practices to ensure scalability, resilience, and maintainability in your microservices architecture.

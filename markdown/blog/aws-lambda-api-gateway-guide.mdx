@@ -1,0 +1,189 @@
+---
+title: "AWS Lambda and API Gateway Integration Guide"
+excerpt: "Learn how to build serverless APIs using AWS Lambda and API Gateway for cost-effective, scalable enterprise solutions."
+coverImage: "/images/courses/aws.png"
+date: "2025-05-15"
+author: "Omendra Dwivedi"
+authorImage: "/images/mentor/user1.png"
+---
+
+# AWS Lambda and API Gateway Integration Guide
+
+## Introduction
+
+Serverless architecture has revolutionized how we build and deploy applications. AWS Lambda combined with API Gateway offers a powerful solution for creating scalable, maintenance-free APIs.
+
+## Architecture Overview
+
+### 1. API Gateway Configuration
+
+```yaml
+openapi: 3.0.0
+info:
+  title: Order Processing API
+  version: 1.0.0
+paths:
+  /orders:
+    post:
+      summary: Create new order
+      x-amazon-apigateway-integration:
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${OrderProcessorFunction}/invocations
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        type: aws_proxy
+```
+
+### 2. Lambda Function Implementation
+
+```typescript
+import { APIGatewayProxyHandler } from 'aws-lambda';
+import { DynamoDB } from 'aws-sdk';
+
+export const handler: APIGatewayProxyHandler = async (event) => {
+  const dynamodb = new DynamoDB.DocumentClient();
+  
+  try {
+    const order = JSON.parse(event.body || '{}');
+    
+    await dynamodb.put({
+      TableName: 'Orders',
+      Item: {
+        orderId: uuid(),
+        ...order,
+        createdAt: new Date().toISOString()
+      }
+    }).promise();
+    
+    return {
+      statusCode: 201,
+      body: JSON.stringify({ message: 'Order created successfully' })
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error' })
+    };
+  }
+};
+```
+
+## Best Practices
+
+### 1. Error Handling
+
+```typescript
+const errorHandler = (error: Error) => {
+  if (error instanceof ValidationError) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        error: 'Validation Error',
+        details: error.details
+      })
+    };
+  }
+  
+  console.error('Unexpected error:', error);
+  return {
+    statusCode: 500,
+    body: JSON.stringify({
+      error: 'Internal Server Error'
+    })
+  };
+};
+```
+
+### 2. Input Validation
+
+```typescript
+import * as Joi from 'joi';
+
+const orderSchema = Joi.object({
+  customerId: Joi.string().required(),
+  items: Joi.array().items(
+    Joi.object({
+      productId: Joi.string().required(),
+      quantity: Joi.number().min(1).required()
+    })
+  ).min(1).required()
+});
+```
+
+## Performance Optimization
+
+1. **Connection Reuse**: Maintain persistent connections
+2. **Cold Start Mitigation**: Use Provisioned Concurrency
+3. **Efficient Data Access**: Implement DynamoDB DAX
+
+```typescript
+// Connection reuse example
+const dynamodb = new DynamoDB.DocumentClient();
+let cachedConnection;
+
+export const handler: APIGatewayProxyHandler = async (event) => {
+  if (!cachedConnection) {
+    cachedConnection = await createConnection();
+  }
+  // Use cached connection
+};
+```
+
+## Security Implementation
+
+### 1. API Key Authentication
+
+```yaml
+securitySchemes:
+  api_key:
+    type: apiKey
+    name: x-api-key
+    in: header
+```
+
+### 2. IAM Roles and Policies
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:Query"
+      ],
+      "Resource": "arn:aws:dynamodb:*:*:table/Orders"
+    }
+  ]
+}
+```
+
+## Monitoring and Logging
+
+1. **CloudWatch Metrics**: Track invocation metrics
+2. **X-Ray Tracing**: Implement distributed tracing
+3. **Structured Logging**: Use standard log formats
+
+```typescript
+const logger = {
+  info: (message: string, context: object) => {
+    console.log(JSON.stringify({
+      level: 'INFO',
+      message,
+      timestamp: new Date().toISOString(),
+      ...context
+    }));
+  }
+};
+```
+
+## Deployment Strategy
+
+1. **Infrastructure as Code**: Use AWS CDK or CloudFormation
+2. **Stage Management**: Implement multiple environments
+3. **Version Control**: API versioning best practices
+
+## Conclusion
+
+AWS Lambda and API Gateway provide a powerful combination for building serverless APIs. Following these best practices ensures a robust, scalable, and maintainable solution for enterprise applications.

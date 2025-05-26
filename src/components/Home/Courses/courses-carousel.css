@@ -1,0 +1,42 @@
+.custom-arrow {
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  background: #2563eb; /* Tailwind's blue-600 */
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: #fff !important;
+  font-size: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.custom-prev {
+  left: -20px;
+}
+.custom-next {
+  right: -20px;
+}
+.slick-arrow:before {
+  display: none;
+}
+.custom-arrow::after {
+  content: '';
+  display: block;
+  width: 0.6em;
+  height: 0.6em;
+  border-top: 3px solid #fff;
+  border-right: 3px solid #fff;
+}
+.custom-prev::after {
+  transform: rotate(-135deg);
+  margin-left: 8px;
+}
+.custom-next::after {
+  transform: rotate(45deg);
+  margin-right: 8px;
+}

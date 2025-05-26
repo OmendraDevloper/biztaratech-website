@@ -1,0 +1,244 @@
+---
+title: "Enterprise Integration with Azure Logic Apps"
+excerpt: "Master enterprise integration scenarios using Azure Logic Apps for seamless connectivity between cloud and on-premise systems."
+coverImage: "/images/companies/AI.png"
+date: "2025-05-10"
+author: "Omendra Dwivedi"
+authorImage: "/images/mentor/user1.png"
+---
+
+# Enterprise Integration with Azure Logic Apps
+
+## Introduction
+
+Azure Logic Apps provides a powerful platform for implementing enterprise integration patterns. This guide explores how to leverage Logic Apps for complex integration scenarios.
+
+## Key Integration Patterns
+
+### 1. Message Routing Pattern
+
+```json
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/schemas/2016-06-01/Microsoft.Logic.json",
+    "actions": {
+      "Switch": {
+        "type": "Switch",
+        "expression": "@triggerBody()?['messageType']",
+        "cases": {
+          "Order": {
+            "actions": {
+              "Route_to_Order_Queue": {
+                "type": "ApiConnection",
+                "inputs": {
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['servicebus']['connectionId']"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### 2. Data Transformation
+
+```json
+{
+  "Transform_JSON": {
+    "type": "Transform",
+    "inputs": {
+      "content": "@body('Get_message')",
+      "integrationAccount": {
+        "map": {
+          "name": "OrderToSAPMap"
+        }
+      }
+    }
+  }
+}
+```
+
+## Implementation Scenarios
+
+### 1. B2B Integration
+
+```json
+{
+  "Parse_EDI_X12": {
+    "type": "Xml",
+    "inputs": {
+      "content": "@triggerBody()",
+      "schema": {
+        "name": "X12_850_schema"
+      }
+    }
+  }
+}
+```
+
+### 2. Cloud to On-premise Integration
+
+```json
+{
+  "HTTP_to_On_Premise": {
+    "type": "Http",
+    "inputs": {
+      "method": "POST",
+      "uri": "@parameters('OnPremiseEndpoint')",
+      "body": "@body('Transform_Message')"
+    }
+  }
+}
+```
+
+## Error Handling and Monitoring
+
+### 1. Retry Policy Configuration
+
+```json
+{
+  "Invoke_SAP_API": {
+    "type": "Http",
+    "inputs": {
+      "method": "POST",
+      "uri": "@parameters('SAPEndpoint')",
+      "retryPolicy": {
+        "type": "fixed",
+        "count": 3,
+        "interval": "PT30S"
+      }
+    }
+  }
+}
+```
+
+### 2. Error Notifications
+
+```json
+{
+  "Send_Error_Email": {
+    "type": "ApiConnection",
+    "inputs": {
+      "host": {
+        "connection": {
+          "name": "@parameters('$connections')['office365']['connectionId']"
+        }
+      },
+      "method": "post",
+      "body": {
+        "to": "support@example.com",
+        "subject": "Logic App Error Alert",
+        "body": "@body('Failed_Action')"
+      }
+    }
+  }
+}
+```
+
+## Security Implementation
+
+### 1. Managed Identity Configuration
+
+```json
+{
+  "definition": {
+    "actions": {
+      "Get_Secret": {
+        "type": "ApiConnection",
+        "inputs": {
+          "host": {
+            "connection": {
+              "name": "@parameters('$connections')['keyvault']['connectionId']"
+            }
+          },
+          "method": "get",
+          "path": "/secrets/@{encodeURIComponent('APIKey')}/value"
+        }
+      }
+    }
+  },
+  "identity": {
+    "type": "SystemAssigned"
+  }
+}
+```
+
+### 2. Network Security
+
+```json
+{
+  "properties": {
+    "networkConfiguration": {
+      "accessEndpoint": "AccessEndpoint=Private",
+      "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+    }
+  }
+}
+```
+
+## Performance Optimization
+
+### 1. Parallel Processing
+
+```json
+{
+  "Parallel_Branch": {
+    "type": "Parallel",
+    "branches": [
+      {
+        "actions": {
+          "Process_Orders": {
+            "type": "ApiConnection",
+            "inputs": {}
+          }
+        }
+      },
+      {
+        "actions": {
+          "Update_Inventory": {
+            "type": "ApiConnection",
+            "inputs": {}
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### 2. Batching Pattern
+
+```json
+{
+  "Batch_Messages": {
+    "type": "Batch",
+    "inputs": {
+      "batchSize": 100,
+      "batchTimeout": "PT1H"
+    }
+  }
+}
+```
+
+## Monitoring and Analytics
+
+1. **Azure Monitor Integration**
+2. **Application Insights**
+3. **Power BI Dashboards**
+
+## Best Practices
+
+1. **Version Control**: Use Azure DevOps for Logic Apps deployment
+2. **Environment Management**: Implement proper dev/test/prod separation
+3. **Documentation**: Maintain comprehensive integration documentation
+
+## Conclusion
+
+Azure Logic Apps provides a robust platform for enterprise integration. Following these patterns and practices ensures successful implementation of complex integration scenarios while maintaining security, performance, and maintainability.

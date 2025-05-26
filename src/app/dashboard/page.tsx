@@ -1,0 +1,1035 @@
+"use client";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { courseData } from "@/app/api/data";
+
+const ManageStudents = dynamic(() => import("./manage-students"), { ssr: false });
+const ScheduleClass = dynamic(() => import("./schedule-class"), { ssr: false });
+
+export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [files, setFiles] = useState<string[]>([]);
+
+  const role = (session?.user as any)?.role || "student";
+
+  // Sidebar menu state
+  const [selectedMenu, setSelectedMenu] = useState("account");
+
+  // --- Admin Management State ---
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState("");
+  const [editUser, setEditUser] = useState<any | null>(null);
+  const [editUserModal, setEditUserModal] = useState(false);
+  const [editUserForm, setEditUserForm] = useState({ username: "", password: "" });
+  const [userActionLoading, setUserActionLoading] = useState(false);
+
+  // State for classes
+  const [classes, setClasses] = useState<any[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
+  const [classesError, setClassesError] = useState("");
+  const [editClass, setEditClass] = useState<any | null>(null);
+  const [editClassModal, setEditClassModal] = useState(false);
+  const [editClassForm, setEditClassForm] = useState({ title: "", date: "", time: "", teacher: "" });
+  const [classActionLoading, setClassActionLoading] = useState(false);
+
+  // Add state for webinars
+  const [webinars, setWebinars] = useState<any[]>([]);
+  const [webinarLoading, setWebinarLoading] = useState(false);
+  const [webinarError, setWebinarError] = useState("");
+
+  // Add state for webinar editing
+  const [editWebinar, setEditWebinar] = useState<any | null>(null);
+  const [editWebinarForm, setEditWebinarForm] = useState({
+    topic: "",
+    description: "",
+    date: "",
+    time: "",
+    image: ""
+  });
+  const [editWebinarModal, setEditWebinarModal] = useState(false);
+  
+  // State for webinar registrations
+  const [webinarRegistrations, setWebinarRegistrations] = useState<any[]>([]);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
+  const [registrationsError, setRegistrationsError] = useState("");
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/signin");
+    }
+  }, [status, router]);
+
+  // Fetch shared files list
+  useEffect(() => {
+    fetch('/uploads-index.json')
+      .then(res => res.json())
+      .then(data => setFiles(data.files || []))
+      .catch(() => setFiles([]));
+  }, []);
+
+  // --- Admin Data Fetching ---
+  // Fetch users
+  useEffect(() => {
+    if (role !== "admin") return;
+    setUsersLoading(true);
+    fetch("/api/users")
+      .then(res => res.json())
+      .then(data => {
+        setUsers(data.users || []);
+        setUsersError(data.success ? "" : data.error || "Failed to fetch users");
+        setUsersLoading(false);
+      })
+      .catch(() => {
+        setUsersError("Failed to fetch users");
+        setUsersLoading(false);
+      });
+  }, [role]);
+
+  // Refetch users when switching to List Users
+  useEffect(() => {
+    if (role === "admin" && selectedMenu === "list-users") {
+      setUsersLoading(true);
+      fetch("/api/users")
+        .then(res => res.json())
+        .then(data => {
+          setUsers(data.users || []);
+          setUsersError(data.success ? "" : data.error || "Failed to fetch users");
+          setUsersLoading(false);
+        })
+        .catch(() => {
+          setUsersError("Failed to fetch users");
+          setUsersLoading(false);
+        });
+    }
+  }, [role, selectedMenu]);
+
+  // Fetch classes when switching to Manage Classes
+  useEffect(() => {
+    if (role === "admin" && selectedMenu === "manage-classes") {
+      setClassesLoading(true);
+      fetch("/api/classes")
+        .then(res => res.json())
+        .then(data => {
+          setClasses(data.classes || []);
+          setClassesError(data.success ? "" : data.error || "Failed to fetch classes");
+          setClassesLoading(false);
+        })
+        .catch(() => {
+          setClassesError("Failed to fetch classes");
+          setClassesLoading(false);
+        });
+    }
+  }, [role, selectedMenu]);
+
+  // Fetch classes for teachers as well as admins
+  useEffect(() => {
+    if ((role === "admin" && selectedMenu === "manage-classes") || (role === "teacher" && selectedMenu === "my-classes")) {
+      setClassesLoading(true);
+      fetch("/api/classes")
+        .then(res => res.json())
+        .then(data => {
+          setClasses(data.classes || []);
+          setClassesError(data.success ? "" : data.error || "Failed to fetch classes");
+          setClassesLoading(false);
+        })
+        .catch(() => {
+          setClassesError("Failed to fetch classes");
+          setClassesLoading(false);
+        });
+    }
+  }, [role, selectedMenu]);
+
+  // Fetch webinars when switching to Manage Webinars
+  useEffect(() => {
+    if (role === "admin" && selectedMenu === "manage-webinars") {
+      setWebinarLoading(true);
+      fetch("/api/webinars")
+        .then(res => res.json())
+        .then(data => {
+          setWebinars(data.webinars || []);
+          setWebinarError("");
+          setWebinarLoading(false);
+        })
+        .catch(() => {
+          setWebinarError("Failed to fetch webinars");
+          setWebinarLoading(false);
+        });
+    }
+  }, [role, selectedMenu]);
+
+  // Fetch webinar registrations when switching to Webinar Registrations
+  useEffect(() => {
+    if (role === "admin" && selectedMenu === "webinar-registrations") {
+      setRegistrationsLoading(true);
+      fetch("/api/webinars")
+        .then(res => res.json())
+        .then(data => {
+          const webinarsWithRegistrations = data.webinars || [];
+          setWebinarRegistrations(webinarsWithRegistrations);
+          setRegistrationsError("");
+          setRegistrationsLoading(false);
+        })
+        .catch(() => {
+          setRegistrationsError("Failed to fetch webinar registrations");
+          setRegistrationsLoading(false);
+        });
+    }
+  }, [role, selectedMenu]);
+
+  // User edit handlers
+  const openEditUser = (user: any) => {
+    setEditUser(user);
+    setEditUserForm({ username: user.username || "", password: "" });
+    setEditUserModal(true);
+  };
+  const handleEditUserChange = (e: any) => {
+    setEditUserForm({ ...editUserForm, [e.target.name]: e.target.value });
+  };
+  const handleEditUserSubmit = async (e: any) => {
+    e.preventDefault();
+    setUserActionLoading(true);
+    const res = await fetch("/api/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: editUser._id, ...editUserForm })
+    });
+    setUserActionLoading(false);
+    setEditUserModal(false);
+    if (res.ok) {
+      setUsers(users.map(u => u._id === editUser._id ? { ...u, username: editUserForm.username } : u));
+    }
+  };
+  const handleDeleteUser = async (user: any) => {
+    if (!confirm("Delete this user?")) return;
+    setUserActionLoading(true);
+    await fetch("/api/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: user._id })
+    });
+    setUserActionLoading(false);
+    setUsers(users.filter(u => u._id !== user._id));
+  };
+
+  // Slot functionality completely removed
+
+  // Edit class handlers
+  const openEditClass = (cls: any) => {
+    setEditClass(cls);
+    setEditClassForm({
+      title: cls.title || "",
+      date: cls.date || "",
+      time: cls.time || "",
+      teacher: cls.teacher || ""
+    });
+    setEditClassModal(true);
+  };
+  const handleEditClassChange = (e: any) => {
+    setEditClassForm({ ...editClassForm, [e.target.name]: e.target.value });
+  };
+  const handleEditClassSubmit = async (e: any) => {
+    e.preventDefault();
+    setClassActionLoading(true);
+    const res = await fetch("/api/classes", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: editClass._id, ...editClassForm })
+    });
+    setClassActionLoading(false);
+    setEditClassModal(false);
+    if (res.ok) {
+      setClasses(classes.map(c => c._id === editClass._id ? { ...c, ...editClassForm } : c));
+    }
+  };
+  const handleDeleteClass = async (cls: any) => {
+    if (!confirm("Delete this class?")) return;
+    setClassActionLoading(true);
+    await fetch("/api/classes", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: cls._id })
+    });
+    setClassActionLoading(false);
+    setClasses(classes.filter(c => c._id !== cls._id));
+  };
+
+  // Webinar management handlers
+  const openEditWebinar = (webinar: any) => {
+    setEditWebinar(webinar);
+    setEditWebinarForm({
+      topic: webinar.topic || "",
+      description: webinar.description || "",
+      date: webinar.date ? new Date(webinar.date).toISOString().split('T')[0] : "",
+      time: webinar.time || "",
+      image: webinar.image || ""
+    });
+    setEditWebinarModal(true);
+  };
+
+  const handleEditWebinarChange = (e: any) => {
+    const { name, value } = e.target;
+    setEditWebinarForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleEditWebinarSubmit = async (e: any) => {
+    e.preventDefault();
+    setWebinarLoading(true);
+
+    try {
+      const res = await fetch(`/api/webinars`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          _id: editWebinar._id,
+          ...editWebinarForm
+        })
+      });
+
+      if (res.ok) {
+        setWebinars(webinars.map(w => 
+          w._id === editWebinar._id 
+            ? { ...w, ...editWebinarForm }
+            : w
+        ));
+        setEditWebinarModal(false);
+      } else {
+        const data = await res.json();
+        setWebinarError(data.error || "Failed to update webinar");
+      }
+    } catch (error) {
+      setWebinarError("An error occurred while updating the webinar");
+    }
+
+    setWebinarLoading(false);
+  };
+
+  const handleDeleteWebinar = async (webinarId: string) => {
+    if (!confirm("Are you sure you want to delete this webinar?")) return;
+
+    setWebinarLoading(true);
+    try {
+      const res = await fetch(`/api/webinars`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ _id: webinarId })
+      });
+
+      if (res.ok) {
+        setWebinars(webinars.filter(w => w._id !== webinarId));
+      } else {
+        const data = await res.json();
+        setWebinarError(data.error || "Failed to delete webinar");
+      }
+    } catch (error) {
+      setWebinarError("An error occurred while deleting the webinar");
+    }
+    setWebinarLoading(false);
+  };
+
+  // Filter classes for teacher/student
+  const filteredClasses = role === "admin"
+    ? classes
+    : role === "teacher"
+      ? classes.filter(cls => {
+          // Match by teacher name, username, or email
+          const teacherIdentity = (session?.user as any)?.name || (session?.user as any)?.username || session?.user?.email;
+          return cls.teacher === teacherIdentity;
+        })
+        : role === "student"
+          ? classes.filter(cls => cls.students?.includes(session?.user?.email))
+          : [];
+
+  if (status === "loading") {
+    return <div className="flex items-center justify-center min-h-[60vh]">Checking permissions...</div>;
+  }
+  if (status === "unauthenticated") {
+    if (typeof window !== 'undefined') {
+      window.location.replace('/signin');
+    }
+    return null;
+  }
+
+  return (
+    <div className="flex min-h-[80vh]">
+      {/* Sidebar for Admin */}
+      {role === "admin" && (
+        <aside className="w-64 bg-white border-r shadow-sm flex flex-col py-8 px-4 gap-2">
+          <h2 className="text-xl font-bold mb-6 text-primary">Admin Menu</h2>
+          <button onClick={() => setSelectedMenu("account")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "account" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Account Info</button>
+          <button onClick={() => setSelectedMenu("create-user")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "create-user" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Create User</button>
+          <button onClick={() => setSelectedMenu("list-users")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "list-users" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>List Users</button>
+          <button onClick={() => setSelectedMenu("manage-webinars")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "manage-webinars" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Manage Webinars</button>
+          <button onClick={() => setSelectedMenu("create-webinar")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "create-webinar" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Create New Webinar</button>
+          <button onClick={() => setSelectedMenu("webinar-registrations")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "webinar-registrations" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Webinar Registrations</button>
+          <button onClick={() => setSelectedMenu("create-class")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "create-class" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Create Class & Assign Teacher</button>
+          <button onClick={() => setSelectedMenu("manage-classes")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "manage-classes" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Manage Classes</button>
+        </aside>
+      )}
+      
+      {/* Sidebar for Teacher */}
+      {role === "teacher" && (
+        <aside className="w-64 bg-white border-r shadow-sm flex flex-col py-8 px-4 gap-2">
+          <h2 className="text-xl font-bold mb-6 text-primary">Teacher Menu</h2>
+          <button onClick={() => setSelectedMenu("account")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "account" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Account Info</button>
+          <button onClick={() => setSelectedMenu("my-classes")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "my-classes" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>My Classes</button>
+          <button onClick={() => setSelectedMenu("manage-students")}
+            className={`text-left px-4 py-2 rounded-lg mb-1 font-medium ${selectedMenu === "manage-students" ? "bg-primary text-white" : "hover:bg-primary/10"}`}>Manage Students</button>
+        </aside>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 p-8 bg-gray-50">
+        {/* Admin and teacher content sections */}
+        {role === "admin" && selectedMenu === "account" && (
+          <div className="max-w-xl bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Your Account Info</h2>
+            <div className="mb-2"><span className="font-semibold">Username:</span> {(session?.user as any)?.username || session?.user?.name || "-"}</div>
+            <div className="mb-2"><span className="font-semibold">Email:</span> {session?.user?.email || "-"}</div>
+            <div className="mb-2"><span className="font-semibold">Role:</span> Admin</div>
+          </div>
+        )}
+        {role === "admin" && selectedMenu === "create-user" && (
+          <div className="max-w-lg bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Create New User</h2>
+            <form
+              className="space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setUserActionLoading(true);
+                setUsersError("");
+                setUsersLoading(false);
+                const form = e.target as HTMLFormElement;
+                const formData = new FormData(form);
+                const body = {
+                  name: formData.get("name"),
+                  username: formData.get("username"),
+                  email: formData.get("email"),
+                  password: formData.get("password"),
+                  role: formData.get("role"),
+                };
+                const res = await fetch("/api/register", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(body),
+                });
+                setUserActionLoading(false);
+                if (res.ok) {
+                  form.reset();
+                  setUsersError("");
+                  setUsersLoading(false);
+                  alert("User created successfully!");
+                } else {
+                  const data = await res.json();
+                  setUsersError(data.error || "Failed to create user");
+                }
+              }}
+            >
+              <div>
+                <label className="block font-medium mb-1">Name</label>
+                <input name="name" required className="w-full px-4 py-2 border rounded" placeholder="Full Name" />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Username</label>
+                <input name="username" required className="w-full px-4 py-2 border rounded" placeholder="Username" />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Email</label>
+                <input name="email" type="email" required className="w-full px-4 py-2 border rounded" placeholder="Email" />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Password</label>
+                <input name="password" type="password" required className="w-full px-4 py-2 border rounded" placeholder="Password" />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Role</label>
+                <select name="role" required className="w-full px-4 py-2 border rounded">
+                  <option value="student">Student</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-primary text-white py-2 rounded" disabled={userActionLoading}>
+                {userActionLoading ? "Creating..." : "Create User"}
+              </button>
+              {usersError && <div className="text-red-600 mt-2">{usersError}</div>}
+            </form>
+          </div>
+        )}
+        {role === "admin" && selectedMenu === "list-users" && (
+          <div className="max-w-3xl bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">All Users</h2>
+            {usersLoading ? (
+              <div className="py-8 text-center text-lg">Loading users...</div>
+            ) : usersError ? (
+              <div className="py-8 text-center text-red-600">{usersError}</div>
+            ) : users.length === 0 ? (
+              <div className="py-8 text-center text-gray-500">No users found.</div>
+            ) : (
+              <table className="min-w-full text-left border-separate border-spacing-y-2">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="py-2 px-4 rounded-l-lg">Name</th>
+                    <th className="py-2 px-4">Username</th>
+                    <th className="py-2 px-4">Email</th>
+                    <th className="py-2 px-4">Role</th>
+                    <th className="py-2 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user, idx) => (
+                    <tr key={user._id} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <td className="py-2 px-4 font-medium">{user.name}</td>
+                      <td className="py-2 px-4">{user.username}</td>
+                      <td className="py-2 px-4">{user.email}</td>
+                      <td className="py-2 px-4 capitalize">{user.role}</td>
+                      <td className="py-2 px-4 flex gap-2">
+                        <button className="bg-primary text-white px-3 py-1 rounded text-sm" onClick={() => openEditUser(user)}>Edit</button>
+                        <button className="bg-red-500 text-white px-3 py-1 rounded text-sm" onClick={() => handleDeleteUser(user)} disabled={userActionLoading}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {/* Edit User Modal */}
+            {editUserModal && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg max-w-md w-full relative p-6">
+                  <button className="absolute top-2 right-2 text-xl" onClick={() => setEditUserModal(false)}>&times;</button>
+                  <h3 className="text-lg font-bold mb-4">Edit User</h3>
+                  <form onSubmit={handleEditUserSubmit} className="space-y-4">
+                    <input name="username" value={editUserForm.username} onChange={handleEditUserChange} required className="w-full px-4 py-2 border rounded" placeholder="Username" />
+                    <input name="password" value={editUserForm.password} onChange={handleEditUserChange} type="password" className="w-full px-4 py-2 border rounded" placeholder="New Password (leave blank to keep)" />
+                    <button type="submit" className="w-full bg-primary text-white py-2 rounded" disabled={userActionLoading}>{userActionLoading ? "Saving..." : "Save Changes"}</button>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {role === "admin" && selectedMenu === "create-webinar" && (
+          <div className="max-w-lg bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Create New Webinar</h2>
+            <form 
+              className="space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setWebinarLoading(true);
+                const form = e.target as HTMLFormElement;
+                const formData = new FormData(form);
+
+                const imageInput = form.querySelector('input[type="file"]') as HTMLInputElement;
+                const file = imageInput.files?.[0];
+                
+                // Upload image first if provided
+                let imagePath = '';
+                if (file) {
+                  const imageFormData = new FormData();
+                  imageFormData.append('file', file);
+                  const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: imageFormData
+                  });
+                  if (uploadRes.ok) {
+                    const data = await uploadRes.json();
+                    if (data.success) {
+                      imagePath = data.filePath;
+                    } else {
+                      setWebinarError(data.error || "Failed to upload image");
+                      setWebinarLoading(false);
+                      return;
+                    }
+                  } else {
+                    setWebinarError("Failed to upload image");
+                    setWebinarLoading(false);
+                    return;
+                  }
+                }
+
+                // Create webinar
+                const webinarData = {
+                  topic: formData.get("topic"),
+                  description: formData.get("description"),
+                  date: formData.get("date"),
+                  time: formData.get("time"),
+                  image: imagePath || '/images/banner/WebBanner.png',
+                };
+
+                const res = await fetch("/api/webinars", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(webinarData),
+                });
+
+                setWebinarLoading(false);
+                if (res.ok) {
+                  form.reset();
+                  setWebinarError("");
+                  alert("Webinar created successfully!");
+                } else {
+                  const data = await res.json();
+                  setWebinarError(data.error || "Failed to create webinar");
+                }
+              }}
+            >
+              <div>
+                <label className="block font-medium mb-1">Topic</label>
+                <input 
+                  name="topic" 
+                  required 
+                  className="w-full px-4 py-2 border rounded" 
+                  placeholder="Webinar topic"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Description</label>
+                <textarea 
+                  name="description" 
+                  required 
+                  className="w-full px-4 py-2 border rounded" 
+                  placeholder="Brief description of the webinar"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Date</label>
+                <input 
+                  name="date" 
+                  type="date" 
+                  required 
+                  className="w-full px-4 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Time</label>
+                <input 
+                  name="time" 
+                  type="time" 
+                  required 
+                  className="w-full px-4 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Banner Image</label>
+                <div className="space-y-2">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="w-full px-4 py-2 border rounded"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const preview = document.getElementById('imagePreview') as HTMLImageElement;
+                        preview.src = URL.createObjectURL(file);
+                        preview.style.display = 'block';
+                      }
+                    }}
+                  />
+                  <img
+                    id="imagePreview"
+                    alt="Banner preview"
+                    className="max-w-full h-auto rounded-lg shadow-sm hidden"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-primary text-white py-2 rounded"
+                disabled={webinarLoading}
+              >
+                {webinarLoading ? "Creating..." : "Create Webinar"}
+              </button>
+              {webinarError && <div className="text-red-600 mt-2">{webinarError}</div>}
+            </form>
+          </div>
+        )}
+
+        {role === "admin" && selectedMenu === "manage-webinars" && (
+          <div className="max-w-3xl bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Manage Webinars</h2>
+            {webinarLoading ? (
+              <div className="py-8 text-center text-lg">Loading webinars...</div>
+            ) : webinarError ? (
+              <div className="py-8 text-center text-red-600">{webinarError}</div>
+            ) : webinars.length === 0 ? (
+              <div className="py-8 text-center text-gray-500">No webinars found.</div>
+            ) : (
+              <div className="space-y-4">
+                {webinars.map((webinar: any) => (
+                  <div key={webinar._id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{webinar.topic}</h3>
+                        <p className="text-gray-600">{webinar.description}</p>
+                        <div className="mt-2 space-x-4 text-sm">
+                          <span>Date: {new Date(webinar.date).toLocaleDateString()}</span>
+                          <span>Time: {webinar.time}</span>
+                        </div>
+                        <div className="mt-2 text-sm text-gray-500">
+                          Registrations: {webinar.registrations?.length || 0}
+                        </div>
+                      </div>
+                      <div className="space-x-2">
+                        <button
+                          onClick={() => openEditWebinar(webinar)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Update
+                        </button>
+                        <button
+                          onClick={() => handleDeleteWebinar(webinar._id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Edit Webinar Modal */}
+            {editWebinarModal && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg max-w-lg w-full relative p-6">
+                  <button 
+                    className="absolute top-2 right-2 text-xl" 
+                    onClick={() => setEditWebinarModal(false)}
+                  >
+                    &times;
+                  </button>
+                  <h3 className="text-lg font-bold mb-4">Edit Webinar</h3>
+                  <form onSubmit={handleEditWebinarSubmit} className="space-y-4">
+                    <div>
+                      <label className="block font-medium mb-1">Topic</label>
+                      <input 
+                        name="topic"
+                        value={editWebinarForm.topic}
+                        onChange={handleEditWebinarChange}
+                        required
+                        className="w-full px-4 py-2 border rounded"
+                        placeholder="Webinar topic"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Description</label>
+                      <textarea
+                        name="description"
+                        value={editWebinarForm.description}
+                        onChange={handleEditWebinarChange}
+                        required
+                        className="w-full px-4 py-2 border rounded"
+                        placeholder="Brief description of the webinar"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Date</label>
+                      <input
+                        name="date"
+                        type="date"
+                        value={editWebinarForm.date}
+                        onChange={handleEditWebinarChange}
+                        required
+                        className="w-full px-4 py-2 border rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Time</label>
+                      <input
+                        name="time"
+                        type="time"
+                        value={editWebinarForm.time}
+                        onChange={handleEditWebinarChange}
+                        required
+                        className="w-full px-4 py-2 border rounded"
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      className="w-full bg-primary text-white py-2 rounded"
+                      disabled={webinarLoading}
+                    >
+                      {webinarLoading ? "Saving..." : "Save Changes"}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {role === "admin" && selectedMenu === "create-class" && (
+          <div className="max-w-lg bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Create Class & Assign Teacher</h2>
+            <form
+              className="space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setUserActionLoading(true);
+                setUsersError("");
+                const form = e.target as HTMLFormElement;
+                const formData = new FormData(form);
+                const title = formData.get("className")?.toString().trim();
+                const teacherId = formData.get("teacherId")?.toString().trim();
+                const date = formData.get("date")?.toString().trim();
+                const time = formData.get("time")?.toString().trim();
+                if (!title || !teacherId || !date || !time) {
+                  setUserActionLoading(false);
+                  setUsersError("All fields are required.");
+                  return;
+                }
+                // Find teacher name/email from users list
+                const teacherUser = users.find(u => u._id === teacherId);
+                const teacher = teacherUser?.name || teacherUser?.username || teacherUser?.email || "";
+                if (!teacher) {
+                  setUserActionLoading(false);
+                  setUsersError("Invalid teacher selected.");
+                  return;
+                }
+                const body = {
+                  title,
+                  teacher,
+                  date,
+                  time,
+                };
+                const res = await fetch("/api/classes", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(body),
+                });
+                setUserActionLoading(false);
+                if (res.ok) {
+                  form.reset();
+                  setUsersError("");
+                  alert("Class created and teacher assigned!");
+                } else {
+                  const data = await res.json();
+                  setUsersError(data.error || "Failed to create class");
+                }
+              }}
+            >
+              <div>
+                <label className="block font-medium mb-1">Course</label>
+                <select name="className" required className="w-full px-4 py-2 border rounded">
+                  <option value="">Select Course</option>
+                  {courseData.map((course, idx) => (
+                    <option key={idx} value={course.heading}>{course.heading}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Assign Teacher</label>
+                <select name="teacherId" required className="w-full px-4 py-2 border rounded">
+                  <option value="">Select Teacher</option>
+                  {users.filter(u => u.role === "teacher").map(t => (
+                    <option key={t._id} value={t._id}>{t.name || t.username}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Date</label>
+                <input name="date" type="date" required className="w-full px-4 py-2 border rounded" />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Time</label>
+                <input name="time" type="time" required className="w-full px-4 py-2 border rounded" />
+              </div>
+              <button type="submit" className="w-full bg-primary text-white py-2 rounded" disabled={userActionLoading}>
+                {userActionLoading ? "Creating..." : "Create Class & Assign Teacher"}
+              </button>
+              {usersError && <div className="text-red-600 mt-2">{usersError}</div>}
+            </form>
+          </div>
+        )}
+
+        {role === "admin" && selectedMenu === "manage-classes" && (
+          <div className="max-w-3xl bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Manage Classes</h2>
+            {classesLoading ? (
+              <div>Loading classes...</div>
+            ) : classesError ? (
+              <div className="text-red-600">{classesError}</div>
+            ) : (
+              <table className="w-full border mt-4">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="py-2 px-4">Title</th>
+                    <th className="py-2 px-4">Teacher</th>
+                    <th className="py-2 px-4">Date</th>
+                    <th className="py-2 px-4">Time</th>
+                    <th className="py-2 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClasses.map(cls => (
+                    <tr key={cls._id} className="border-b">
+                      <td className="py-2 px-4">{cls.title}</td>
+                      <td className="py-2 px-4">{cls.teacher}</td>
+                      <td className="py-2 px-4">{cls.date}</td>
+                      <td className="py-2 px-4">{cls.time}</td>
+                      <td className="py-2 px-4 flex gap-2">
+                        <button className="bg-primary text-white px-3 py-1 rounded text-sm" onClick={() => openEditClass(cls)}>Edit</button>
+                        <button className="bg-red-500 text-white px-3 py-1 rounded text-sm" onClick={() => handleDeleteClass(cls)} disabled={classActionLoading}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {/* Edit Class Modal */}
+            {editClassModal && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg max-w-md w-full relative p-6">
+                  <button className="absolute top-2 right-2 text-xl" onClick={() => setEditClassModal(false)}>&times;</button>
+                  <h3 className="text-lg font-bold mb-4">Edit Class</h3>
+                  <form onSubmit={handleEditClassSubmit} className="space-y-4">
+                    <input name="title" value={editClassForm.title} onChange={handleEditClassChange} required className="w-full px-4 py-2 border rounded" placeholder="Class Title" />
+                    <input name="date" value={editClassForm.date} onChange={handleEditClassChange} required className="w-full px-4 py-2 border rounded" placeholder="Date (YYYY-MM-DD)" />
+                    <input name="time" value={editClassForm.time} onChange={handleEditClassChange} required className="w-full px-4 py-2 border rounded" placeholder="Time (e.g. 10:00 AM)" />
+                    <input name="teacher" value={editClassForm.teacher} onChange={handleEditClassChange} required className="w-full px-4 py-2 border rounded" placeholder="Teacher Name or Email" />
+                    <button type="submit" className="w-full bg-primary text-white py-2 rounded" disabled={classActionLoading}>{classActionLoading ? "Saving..." : "Save Changes"}</button>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Teacher main content */}
+        {role === "teacher" && selectedMenu === "account" && (
+          <div className="max-w-xl bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Your Account Info</h2>
+            <div className="mb-2"><span className="font-semibold">Username:</span> {(session?.user as any)?.username || session?.user?.name || "-"}</div>
+            <div className="mb-2"><span className="font-semibold">Email:</span> {session?.user?.email || "-"}</div>
+            <div className="mb-2"><span className="font-semibold">Role:</span> Teacher</div>
+          </div>
+        )}
+        {role === "teacher" && selectedMenu === "my-classes" && (
+          <div className="max-w-3xl bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">My Classes</h2>
+            {filteredClasses.length === 0 ? (
+              <div className="py-8 text-center text-gray-500">No classes assigned.</div>
+            ) : (
+              <table className="w-full border mt-4">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="py-2 px-4">Title</th>
+                    <th className="py-2 px-4">Date</th>
+                    <th className="py-2 px-4">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClasses.map(cls => (
+                    <tr key={cls._id} className="border-b">
+                      <td className="py-2 px-4">{cls.title}</td>
+                      <td className="py-2 px-4">{cls.date}</td>
+                      <td className="py-2 px-4">{cls.time}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+        {role === "teacher" && selectedMenu === "manage-students" && (
+          <div className="max-w-3xl bg-white rounded shadow p-6">
+            <ManageStudents />
+          </div>
+        )}
+        
+        {/* Webinar Registrations Section */}
+        {role === "admin" && selectedMenu === "webinar-registrations" && (
+          <div className="bg-white rounded shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-primary">Webinar Registrations</h2>
+            
+            {registrationsLoading ? (
+              <div className="py-8 text-center text-lg">Loading registrations...</div>
+            ) : registrationsError ? (
+              <div className="py-8 text-center text-red-600">{registrationsError}</div>
+            ) : webinarRegistrations.length === 0 ? (
+              <div className="py-8 text-center text-gray-500">No webinars with registrations found.</div>
+            ) : (
+              <div className="space-y-8">
+                {webinarRegistrations.map((webinar) => (
+                  <div key={webinar._id} className="border rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-2">{webinar.topic}</h3>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        Date: {new Date(webinar.date).toLocaleDateString()}
+                      </span>
+                      <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        Time: {webinar.time}
+                      </span>
+                      <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        Total Registrations: {webinar.registrations?.length || 0}
+                      </span>
+                    </div>
+                    
+                    {webinar.registrations && webinar.registrations.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-left border-separate border-spacing-y-2">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="py-2 px-4 rounded-l-lg">Name</th>
+                              <th className="py-2 px-4">Email</th>
+                              <th className="py-2 px-4">Phone</th>
+                              <th className="py-2 px-4 rounded-r-lg">Registration Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {webinar.registrations.map((registration: {
+                              name: string;
+                              email: string;
+                              phone?: string;
+                              date?: string;
+                              createdAt: string;
+                            }, idx: number) => (
+                              <tr key={idx} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                                <td className="py-2 px-4 font-medium">{registration.name}</td>
+                                <td className="py-2 px-4">{registration.email}</td>
+                                <td className="py-2 px-4">{registration.phone || "-"}</td>
+                                <td className="py-2 px-4">
+                                  {registration.date ? new Date(registration.date).toLocaleString() : new Date(registration.createdAt).toLocaleDateString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 italic">No registrations for this webinar yet.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

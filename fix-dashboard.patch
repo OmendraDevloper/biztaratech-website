@@ -1,0 +1,32 @@
+--- dashboard/page.tsx.bak2025-05-26 12:00:00
++++ dashboard/page.tsx2025-05-26 12:00:00
+@@ -217,28 +217,6 @@
+     setUsers(users.filter(u => u._id !== user._id));
+   };
+ 
+-  // Slot edit handlers
+-  const openEditSlot = (slot: any) => {
+-    setEditSlot(slot);
+-    setEditSlotForm({ course: slot.course || "", date: slot.date || "", time: slot.time || "" });
+-    setEditSlotModal(true);
+-  };
+-  const handleEditSlotChange = (e: any) => {
+-    setEditSlotForm({ ...editSlotForm, [e.target.name]: e.target.value });
+-  };
+-  const handleEditSlotSubmit = async (e: any) => {
+-    e.preventDefault();
+-    setSlotActionLoading(true);
+-    const res = await fetch("/api/webinar-slots", {
+-      method: "PUT",
+-      headers: { "Content-Type": "application/json" },
+-      body: JSON.stringify({ _id: editSlot._id, ...editSlotForm })
+-    });
+-    setSlotActionLoading(false);
+-    setEditSlotModal(false);
+-    if (res.ok) {
+-      setSlots(slots.map(s => s._id === editSlot._id ? { ...s, ...editSlotForm } : s));
+-    }
+-  };
+   const handleDeleteSlot = async (slot: any) => {
+     if (!confirm("Delete this slot?")) return;
+     setSlotActionLoading(true);
