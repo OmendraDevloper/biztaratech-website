@@ -7,6 +7,9 @@ import { compare } from "bcryptjs";
 const uri = process.env.MONGODB_URI || '';
 const dbName = process.env.MONGODB_DB || 'Biztara';
 
+// Check if we're in a build/prerender context
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
+
 const handler = NextAuth({
   providers: [
     CredentialsProvider({
@@ -16,30 +19,40 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        const client = await MongoClient.connect(uri);
-        const db = client.db(dbName);
-        const users = db.collection("users");
-        const user = await users.findOne({
-          $or: [
-            { username: credentials?.username },
-            { email: credentials?.username }
-          ]
-        });
-        await client.close();
-        if (user && credentials?.password) {
-          const isValid = await compare(credentials.password, user.password);
-          if (isValid) {
-            // Ensure id is a string for NextAuth compatibility
-            return {
-              id: user._id.toString(),
-              name: user.name,
-              email: user.email,
-              role: user.role || 'student',
-              _id: user._id.toString()
-            };
-          }
+        // Skip authentication during build
+        if (isBuildTime) {
+          return null;
         }
-        return null;
+        
+        try {
+          const client = await MongoClient.connect(uri);
+          const db = client.db(dbName);
+          const users = db.collection("users");
+          const user = await users.findOne({
+            $or: [
+              { username: credentials?.username },
+              { email: credentials?.username }
+            ]
+          });
+          await client.close();
+          if (user && credentials?.password) {
+            const isValid = await compare(credentials.password, user.password);
+            if (isValid) {
+              // Ensure id is a string for NextAuth compatibility
+              return {
+                id: user._id.toString(),
+                name: user.name,
+                email: user.email,
+                role: user.role || 'student',
+                _id: user._id.toString()
+              };
+            }
+          }
+          return null;
+        } catch (error) {
+          console.error("NextAuth authentication error:", error);
+          return null;
+        }
       }
     }),
     GoogleProvider({
@@ -76,16 +89,26 @@ const handler = NextAuth({
     },
     async jwt({ token, user }) {
       if (user) {
-        // On sign-in, fetch all fields from DB
-        const client = await MongoClient.connect(uri);
-        const db = client.db(dbName);
-        const users = db.collection('users');
-        const dbUser = await users.findOne({ email: user.email });
-        await client.close();
-        token.role = dbUser?.role || 'student';
-        token._id = dbUser?._id.toString();
-        token.name = dbUser?.name;
-        token.email = dbUser?.email;
+        // Skip DB connection during build
+        if (isBuildTime) {
+          return token;
+        }
+        
+        try {
+          // On sign-in, fetch all fields from DB
+          const client = await MongoClient.connect(uri);
+          const db = client.db(dbName);
+          const users = db.collection('users');
+          const dbUser = await users.findOne({ email: user.email });
+          await client.close();
+          token.role = dbUser?.role || 'student';
+          token._id = dbUser?._id.toString();
+          token.name = dbUser?.name;
+          token.email = dbUser?.email;
+        } catch (error) {
+          console.error("Error fetching user data for JWT:", error);
+          // Don't fail completely, just use what we have
+        }
       }
       return token;
     }
