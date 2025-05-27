@@ -9,7 +9,7 @@ const Logo: React.FC = () => {
     <>
       <Link href="/">
         <Image
-          src={`${getImagePrefix()}images/logo/logo.png`}
+          src={`${getImagePrefix()}images/logo/Logo.png`}
           alt="logo"
           width={160}
           height={50}
