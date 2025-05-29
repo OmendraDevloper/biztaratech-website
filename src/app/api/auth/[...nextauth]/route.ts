@@ -8,7 +8,10 @@ const uri = process.env.MONGODB_URI || '';
 const dbName = process.env.MONGODB_DB || 'Biztara';
 
 // Check if we're in a build/prerender context
-const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                  process.env.SKIP_MONGODB_CHECK === 'true' || 
+                  process.env.VERCEL_ENV === 'preview' ||
+                  (process.env.VERCEL === '1' && process.env.CI === '1');
 
 const handler = NextAuth({
   providers: [

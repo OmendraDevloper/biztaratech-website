@@ -7,7 +7,13 @@
   "build": {
     "env": {
       "NEXT_PUBLIC_VERCEL_ENV": "production",
-      "SKIP_BUILD_STATIC_GENERATION": "true"
+      "SKIP_BUILD_STATIC_GENERATION": "true",
+      "SKIP_MONGODB_CHECK": "true",
+      "NODE_ENV": "production",
+      "MONGODB_URI": "mongodb+srv://admin:passwordplaceholder@cluster0.example.mongodb.net/Biztara?retryWrites=true&w=majority",
+      "MONGODB_DB": "Biztara",
+      "NEXTAUTH_URL": "https://biztaratech-website.vercel.app",
+      "NEXTAUTH_SECRET": "4bf8e3519813becc5f5818cbbc32807e9836c8fe6155388c83dfbd0314d32c5b"
     }
   },
   "github": {
