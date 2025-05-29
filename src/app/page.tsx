@@ -12,7 +12,12 @@ export default function Home() {
   return (
     <main>
       {/* HERO SECTION */}
-      <Hero />
+      <Hero
+        title="Enterprise Integration Training & Custom Software Development"
+        subtitle="By Industry Professionals with 18+ Years of Experience"
+        ctaTraining="Join Our Training Programs"
+        ctaDevelopment="Get Custom Software Solutions"
+      />
 
       {/* WHY CHOOSE US */}
       <WhyChooseUs />

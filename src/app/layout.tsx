@@ -5,6 +5,7 @@ import Footer from "@/components/Layout/Footer";
 import { ThemeProvider } from "next-themes";
 import ScrollToTop from "@/components/ScrollToTop";
 import SessionProvider from "@/components/Auth/SessionProvider";
+import ToasterProvider from "@/components/ToasterProvider";
 const font = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"], });
 
 export default function RootLayout({
@@ -25,6 +26,7 @@ export default function RootLayout({
             {children}
             <Footer />
             <ScrollToTop />
+            <ToasterProvider />
           </SessionProvider>
         </ThemeProvider>
       </body>

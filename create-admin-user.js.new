@@ -41,14 +41,9 @@ async function main() {
   console.log('Connecting to MongoDB...');
   let client;
   try {
-    // Add TLS options to fix SSL connection issues
     client = await MongoClient.connect(uri, { 
-      connectTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      ssl: true,
-      tls: true,
-      tlsAllowInvalidCertificates: true,
-      tlsAllowInvalidHostnames: true
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 30000
     });
     console.log('Successfully connected to MongoDB');
   } catch (error) {

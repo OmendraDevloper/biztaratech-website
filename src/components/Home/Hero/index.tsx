@@ -3,7 +3,19 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { getImagePrefix } from '@/utils/util';
 import { useState, useEffect } from 'react';
 
-const Hero = () => {
+interface HeroProps {
+    title?: string;
+    subtitle?: string;
+    ctaTraining?: string;
+    ctaDevelopment?: string;
+}
+
+const Hero: React.FC<HeroProps> = ({ 
+    title = "Enterprise Integration Training & Custom Software Development", 
+    subtitle = "By Industry Professionals with 18+ Years of Experience",
+    ctaTraining = "Join Our Training Programs",
+    ctaDevelopment = "Get Custom Software Solutions"
+}) => {
     const [webinars, setWebinars] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [form, setForm] = useState({ name: '', email: '', phone: '' });

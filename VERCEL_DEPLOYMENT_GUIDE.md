@@ -52,7 +52,7 @@ This guide will walk you through deploying your Next.js website to Vercel and co
    - SMTP_PASS: [Your email password or app password]
    - SMTP_FROM: "Biztara Tech <your-email@example.com>"
    - NEXTAUTH_URL: https://biztaratech.com
-   - NEXTAUTH_SECRET: [Generate a random string for this]
+   - NEXTAUTH_SECRET: 4bf8e3519813becc5f5818cbbc32807e9836c8fe6155388c83dfbd0314d32c5b
 
 4. Click "Deploy"
 

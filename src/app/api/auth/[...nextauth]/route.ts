@@ -35,6 +35,13 @@ const handler = NextAuth({
             ]
           });
           await client.close();
+          
+          // User not found
+          if (!user) {
+            return null;
+          }
+          
+          // Check password
           if (user && credentials?.password) {
             const isValid = await compare(credentials.password, user.password);
             if (isValid) {
@@ -47,7 +54,10 @@ const handler = NextAuth({
                 _id: user._id.toString()
               };
             }
+            // For incorrect password, return null but don't throw
+            return null;
           }
+          
           return null;
         } catch (error) {
           console.error("NextAuth authentication error:", error);
